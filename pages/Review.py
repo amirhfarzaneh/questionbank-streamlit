@@ -32,6 +32,9 @@ else:
     with st.sidebar.expander("Error details"):
         st.code(err)
 
+st.sidebar.divider()
+st.sidebar.caption("built with :heart: by Amir Hossein Farzaneh")
+
 init_db()
 
 if "review_candidate_id" not in st.session_state:

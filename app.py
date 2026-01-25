@@ -38,6 +38,9 @@ else:
     with st.sidebar.expander("Error details"):
         st.code(err)
 
+st.sidebar.divider()
+st.sidebar.caption("built with :heart: by Amir Hossein Farzaneh")
+
 init_db()
 
 st.title("LeetCode Problems")
@@ -84,32 +87,6 @@ if submitted:
         st.error("Please enter a non-empty question.")
 
 st.divider()
-st.subheader("Delete")
-col1, col2 = st.columns(2)
-
-with col1:
-    with st.form("delete_one_form"):
-        delete_id = st.number_input("Question ID", min_value=1, step=1, value=1)
-        delete_one = st.form_submit_button("Delete selected ID")
-
-    if delete_one:
-        if delete_question(int(delete_id)):
-            st.success(f"Deleted question {int(delete_id)}")
-        else:
-            st.warning("No row deleted (ID not found).")
-
-with col2:
-    with st.form("delete_all_form"):
-        confirm = st.checkbox("I understand this deletes ALL questions")
-        delete_all = st.form_submit_button("Delete ALL", type="primary")
-
-    if delete_all:
-        if not confirm:
-            st.warning("Please confirm before deleting all questions.")
-        else:
-            delete_all_questions()
-            st.success("Deleted all questions.")
-
 st.subheader("Questions Library")
 rows = list_questions()
 table_rows = [
@@ -203,3 +180,29 @@ if st.button("Save changes"):
             st.rerun()
         else:
             st.warning("No rows were updated. Check that edited values are valid.")
+st.divider()
+st.subheader("Delete")
+col1, col2 = st.columns(2)
+
+with col1:
+    with st.form("delete_one_form"):
+        delete_id = st.number_input("Question ID", min_value=1, step=1, value=1)
+        delete_one = st.form_submit_button("Delete selected ID")
+
+    if delete_one:
+        if delete_question(int(delete_id)):
+            st.success(f"Deleted question {int(delete_id)}")
+        else:
+            st.warning("No row deleted (ID not found).")
+
+with col2:
+    with st.form("delete_all_form"):
+        confirm = st.checkbox("I understand this deletes ALL questions")
+        delete_all = st.form_submit_button("Delete ALL", type="primary")
+
+    if delete_all:
+        if not confirm:
+            st.warning("Please confirm before deleting all questions.")
+        else:
+            delete_all_questions()
+            st.success("Deleted all questions.")
