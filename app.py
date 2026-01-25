@@ -96,7 +96,7 @@ edited_df = st.data_editor(
     df,
     disabled=["id", "date_added"],
     hide_index=True,
-    use_container_width=True,
+    width="content",
     num_rows="fixed",
     key="questions_editor",
 )
