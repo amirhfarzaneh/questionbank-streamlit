@@ -10,6 +10,11 @@ def connect():
         return psycopg2.connect(get_database_url())
     return sqlite3.connect(get_db_path())
 
+
+def _sqlite_has_column(conn: sqlite3.Connection, table: str, column: str) -> bool:
+    rows = conn.execute(f"PRAGMA table_info({table});").fetchall()
+    return any(r[1] == column for r in rows)
+
 def init_db() -> None:
     if _is_postgres():
         with connect() as conn:
@@ -18,8 +23,22 @@ def init_db() -> None:
                     """
                     CREATE TABLE IF NOT EXISTS questions (
                         id SERIAL PRIMARY KEY,
-                        text TEXT NOT NULL
+                        text TEXT NOT NULL,
+                        difficulty TEXT NOT NULL DEFAULT 'unknown'
                     )
+                    """
+                )
+                cur.execute(
+                    """
+                    ALTER TABLE questions
+                    ADD COLUMN IF NOT EXISTS difficulty TEXT NOT NULL DEFAULT 'unknown'
+                    """
+                )
+                cur.execute(
+                    """
+                    UPDATE questions
+                    SET difficulty = 'unknown'
+                    WHERE difficulty IS NULL
                     """
                 )
             conn.commit()
@@ -29,8 +48,13 @@ def init_db() -> None:
                 """
                 CREATE TABLE IF NOT EXISTS questions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    text TEXT NOT NULL
+                    text TEXT NOT NULL,
+                    difficulty TEXT NOT NULL DEFAULT 'unknown'
                 )
                 """
             )
+            if not _sqlite_has_column(conn, "questions", "difficulty"):
+                conn.execute(
+                    "ALTER TABLE questions ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'unknown'"
+                )
             conn.commit()
