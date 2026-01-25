@@ -143,8 +143,7 @@ else:
 
     score = _due_score(last_reviewed, times_reviewed)
 
-    st.markdown(f"### #{qid} — {diff}")
-    st.write(text)
+    st.markdown(f"### #{qid} — {text}")
 
     last_reviewed_pt = pd.to_datetime(last_reviewed, utc=True, errors="coerce")
     if pd.isna(last_reviewed_pt):
@@ -161,7 +160,6 @@ else:
     if link:
         st.link_button("Open link", link)
 
-    st.divider()
     if st.button("Reviewed", type="primary"):
         if mark_reviewed(int(qid)):
             st.success("Marked reviewed.")
@@ -183,10 +181,6 @@ st.markdown(
 **Intelligent Pick 2 (due score + randomness)**: computes due scores, takes the top 10 most-due questions, then randomly picks one with probability weighted by due score.
 
 **Reviewed**: increments `times_reviewed` and sets `last_reviewed` to now.
-
-Due score formula:
-
-$$\text{due\_score} = \frac{\text{days\_since\_last\_reviewed}}{2^{\text{times\_reviewed}}}$$
 
 If a question has never been reviewed, we treat `days_since_last_reviewed` as a very large number so it gets prioritized.
 """
