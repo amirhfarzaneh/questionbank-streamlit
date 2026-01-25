@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 
 from database.db import connect, init_db
-from database.questions_repo import get_random_question, list_questions, mark_reviewed
+from database.questions_repo import get_question_by_id, get_random_question, list_questions, mark_reviewed
 
 
 def check_db_connection() -> tuple[bool, str | None]:
@@ -38,7 +38,17 @@ col_a, col_b = st.columns(2)
 with col_a:
     pick_new = st.button("New random", key="review_pick_new_random")
 with col_b:
-    st.caption("")
+    with st.form("pick_by_id_form"):
+        pick_id = st.number_input("Pick by ID", min_value=1, step=1, value=1)
+        pick_by_id = st.form_submit_button("Load")
+
+    if pick_by_id:
+        row_by_id = get_question_by_id(int(pick_id))
+        if row_by_id is None:
+            st.warning("ID not found.")
+        else:
+            st.session_state["review_candidate_id"] = int(pick_id)
+            st.rerun()
 
 row = None
 if not pick_new and st.session_state["review_candidate_id"] is not None:
@@ -56,8 +66,7 @@ if row is None:
 else:
     qid, text, diff, created_at, link, last_reviewed, times_reviewed = row
 
-    st.markdown(f"### #{qid} — {diff}")
-    st.write(text)
+    st.markdown(f"### #{qid} — {text}")
 
     last_reviewed_pt = pd.to_datetime(last_reviewed, utc=True, errors="coerce")
     if pd.isna(last_reviewed_pt):

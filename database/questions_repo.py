@@ -126,6 +126,34 @@ def get_random_question():
         ).fetchone()
 
 
+def get_question_by_id(question_id: int):
+    if not question_id:
+        return None
+
+    if _is_postgres():
+        with connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed
+                    FROM questions
+                    WHERE id = %s
+                    """,
+                    (question_id,),
+                )
+                return cur.fetchone()
+
+    with connect() as conn:
+        return conn.execute(
+            """
+            SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed
+            FROM questions
+            WHERE id = ?
+            """,
+            (question_id,),
+        ).fetchone()
+
+
 def delete_question(question_id: int) -> bool:
     if not question_id:
         return False
