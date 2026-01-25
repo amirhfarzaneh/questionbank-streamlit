@@ -88,16 +88,42 @@ def list_questions(limit: int = 50):
         with connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT id, text, difficulty, created_at, link FROM questions ORDER BY created_at DESC, id DESC LIMIT %s",
+                    "SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed FROM questions ORDER BY created_at DESC, id DESC LIMIT %s",
                     (limit,),
                 )
                 return cur.fetchall()
 
     with connect() as conn:
         return conn.execute(
-            "SELECT id, text, difficulty, created_at, link FROM questions ORDER BY created_at DESC, id DESC LIMIT ?",
+            "SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed FROM questions ORDER BY created_at DESC, id DESC LIMIT ?",
             (limit,),
         ).fetchall()
+
+
+def get_random_question():
+    """Returns one random question row or None if table is empty."""
+    if _is_postgres():
+        with connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed
+                    FROM questions
+                    ORDER BY RANDOM()
+                    LIMIT 1
+                    """
+                )
+                return cur.fetchone()
+
+    with connect() as conn:
+        return conn.execute(
+            """
+            SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed
+            FROM questions
+            ORDER BY RANDOM()
+            LIMIT 1
+            """
+        ).fetchone()
 
 
 def delete_question(question_id: int) -> bool:
@@ -137,6 +163,8 @@ def update_question(
     text: str | None = None,
     difficulty: str | None = None,
     link: str | None = None,
+    last_reviewed: object | None = None,
+    times_reviewed: object | None = None,
 ) -> bool:
     if not question_id:
         return False
@@ -154,7 +182,20 @@ def update_question(
     if link is not None:
         link = (link or "").strip() or None
 
-    if text is None and difficulty is None and link is None:
+    if times_reviewed is not None:
+        try:
+            times_reviewed = int(times_reviewed)
+        except Exception:
+            return False
+        if times_reviewed < 0:
+            return False
+
+    if last_reviewed is not None:
+        # Allow passing datetime objects (psycopg2 handles) or strings.
+        if isinstance(last_reviewed, str):
+            last_reviewed = last_reviewed.strip() or None
+
+    if text is None and difficulty is None and link is None and last_reviewed is None and times_reviewed is None:
         return False
 
     if _is_postgres():
@@ -169,6 +210,12 @@ def update_question(
         if link is not None:
             sets.append("link = %s")
             params.append(link)
+        if last_reviewed is not None:
+            sets.append("last_reviewed = %s")
+            params.append(last_reviewed)
+        if times_reviewed is not None:
+            sets.append("times_reviewed = %s")
+            params.append(times_reviewed)
         params.append(question_id)
 
         with connect() as conn:
@@ -192,12 +239,52 @@ def update_question(
     if link is not None:
         sets_sqlite.append("link = ?")
         params_sqlite.append(link)
+    if last_reviewed is not None:
+        sets_sqlite.append("last_reviewed = ?")
+        params_sqlite.append(last_reviewed)
+    if times_reviewed is not None:
+        sets_sqlite.append("times_reviewed = ?")
+        params_sqlite.append(times_reviewed)
     params_sqlite.append(question_id)
 
     with connect() as conn:
         cur = conn.execute(
             f"UPDATE questions SET {', '.join(sets_sqlite)} WHERE id = ?",
             tuple(params_sqlite),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+
+
+def mark_reviewed(question_id: int) -> bool:
+    if not question_id:
+        return False
+
+    if _is_postgres():
+        with connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE questions
+                    SET last_reviewed = NOW(),
+                        times_reviewed = COALESCE(times_reviewed, 0) + 1
+                    WHERE id = %s
+                    """,
+                    (question_id,),
+                )
+                updated = cur.rowcount
+            conn.commit()
+        return updated > 0
+
+    with connect() as conn:
+        cur = conn.execute(
+            """
+            UPDATE questions
+            SET last_reviewed = CURRENT_TIMESTAMP,
+                times_reviewed = COALESCE(times_reviewed, 0) + 1
+            WHERE id = ?
+            """,
+            (question_id,),
         )
         conn.commit()
         return cur.rowcount > 0

@@ -26,6 +26,8 @@ def init_db() -> None:
                         text TEXT NOT NULL,
                         difficulty TEXT NOT NULL DEFAULT 'unknown'
                         ,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                        ,last_reviewed TIMESTAMPTZ
+                        ,times_reviewed INTEGER NOT NULL DEFAULT 0
                         ,link TEXT
                     )
                     """
@@ -50,9 +52,28 @@ def init_db() -> None:
                 )
                 cur.execute(
                     """
+                    ALTER TABLE questions
+                    ADD COLUMN IF NOT EXISTS last_reviewed TIMESTAMPTZ
+                    """
+                )
+                cur.execute(
+                    """
+                    ALTER TABLE questions
+                    ADD COLUMN IF NOT EXISTS times_reviewed INTEGER NOT NULL DEFAULT 0
+                    """
+                )
+                cur.execute(
+                    """
                     UPDATE questions
                     SET difficulty = 'unknown'
                     WHERE difficulty IS NULL
+                    """
+                )
+                cur.execute(
+                    """
+                    UPDATE questions
+                    SET times_reviewed = 0
+                    WHERE times_reviewed IS NULL
                     """
                 )
             conn.commit()
@@ -65,6 +86,8 @@ def init_db() -> None:
                     text TEXT NOT NULL,
                     difficulty TEXT NOT NULL DEFAULT 'unknown'
                     ,created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+                    ,last_reviewed TEXT
+                    ,times_reviewed INTEGER NOT NULL DEFAULT 0
                     ,link TEXT
                 )
                 """
@@ -81,4 +104,15 @@ def init_db() -> None:
                 conn.execute(
                     "ALTER TABLE questions ADD COLUMN link TEXT"
                 )
+            if not _sqlite_has_column(conn, "questions", "last_reviewed"):
+                conn.execute(
+                    "ALTER TABLE questions ADD COLUMN last_reviewed TEXT"
+                )
+            if not _sqlite_has_column(conn, "questions", "times_reviewed"):
+                conn.execute(
+                    "ALTER TABLE questions ADD COLUMN times_reviewed INTEGER NOT NULL DEFAULT 0"
+                )
+            conn.execute(
+                "UPDATE questions SET times_reviewed = 0 WHERE times_reviewed IS NULL"
+            )
             conn.commit()

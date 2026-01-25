@@ -113,8 +113,16 @@ with col2:
 st.subheader("Questions Library")
 rows = list_questions()
 table_rows = [
-    {"id": qid, "problem": text, "difficulty": diff, "date_added": created_at, "link": link}
-    for qid, text, diff, created_at, link in rows
+    {
+        "id": qid,
+        "problem": text,
+        "difficulty": diff,
+        "date_added": created_at,
+        "link": link,
+        "last_reviewed": last_reviewed,
+        "times_reviewed": times_reviewed,
+    }
+    for qid, text, diff, created_at, link, last_reviewed, times_reviewed in rows
 ]
 
 df = pd.DataFrame(table_rows)
@@ -123,7 +131,7 @@ if st.session_state.get("_reset_questions_editor"):
     st.session_state.pop("questions_editor", None)
     st.session_state["_reset_questions_editor"] = False
 
-st.caption("Edit 'problem', 'difficulty', or 'link' in the table, then click Save changes.")
+st.caption("Edit fields in the table, then click Save changes.")
 edited_df = st.data_editor(
     df,
     disabled=["id", "date_added"],
@@ -161,7 +169,24 @@ if st.button("Save changes"):
             if isinstance(new_link, str):
                 new_link = new_link.strip()
 
-            ok = update_question(qid, text=new_problem, difficulty=new_difficulty, link=new_link)
+            new_last_reviewed = patch.get("last_reviewed") if "last_reviewed" in patch else None
+            if isinstance(new_last_reviewed, float) and pd.isna(new_last_reviewed):
+                new_last_reviewed = ""
+            if isinstance(new_last_reviewed, str):
+                new_last_reviewed = new_last_reviewed.strip()
+
+            new_times_reviewed = patch.get("times_reviewed") if "times_reviewed" in patch else None
+            if isinstance(new_times_reviewed, float) and pd.isna(new_times_reviewed):
+                new_times_reviewed = None
+
+            ok = update_question(
+                qid,
+                text=new_problem,
+                difficulty=new_difficulty,
+                link=new_link,
+                last_reviewed=new_last_reviewed,
+                times_reviewed=new_times_reviewed,
+            )
             if ok:
                 changed += 1
 
