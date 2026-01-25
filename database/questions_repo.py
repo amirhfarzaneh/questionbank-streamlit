@@ -38,14 +38,14 @@ def list_questions(limit: int = 50):
         with connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT id, text, difficulty FROM questions ORDER BY id DESC LIMIT %s",
+                    "SELECT id, text, difficulty, created_at FROM questions ORDER BY id DESC LIMIT %s",
                     (limit,),
                 )
                 return cur.fetchall()
 
     with connect() as conn:
         return conn.execute(
-            "SELECT id, text, difficulty FROM questions ORDER BY id DESC LIMIT ?",
+            "SELECT id, text, difficulty, created_at FROM questions ORDER BY id DESC LIMIT ?",
             (limit,),
         ).fetchall()
 

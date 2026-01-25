@@ -73,8 +73,8 @@ with col2:
 st.subheader("Questions Library")
 rows = list_questions()
 table_rows = [
-    {"id": qid, "problem": text, "difficulty": diff}
-    for qid, text, diff in rows
+    {"id": qid, "problem": text, "difficulty": diff, "date_added": created_at}
+    for qid, text, diff, created_at in rows
 ]
 st.dataframe(
     table_rows,

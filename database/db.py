@@ -25,6 +25,7 @@ def init_db() -> None:
                         id SERIAL PRIMARY KEY,
                         text TEXT NOT NULL,
                         difficulty TEXT NOT NULL DEFAULT 'unknown'
+                        ,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                     )
                     """
                 )
@@ -32,6 +33,12 @@ def init_db() -> None:
                     """
                     ALTER TABLE questions
                     ADD COLUMN IF NOT EXISTS difficulty TEXT NOT NULL DEFAULT 'unknown'
+                    """
+                )
+                cur.execute(
+                    """
+                    ALTER TABLE questions
+                    ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                     """
                 )
                 cur.execute(
@@ -50,11 +57,16 @@ def init_db() -> None:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     text TEXT NOT NULL,
                     difficulty TEXT NOT NULL DEFAULT 'unknown'
+                    ,created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
                 )
                 """
             )
             if not _sqlite_has_column(conn, "questions", "difficulty"):
                 conn.execute(
                     "ALTER TABLE questions ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'unknown'"
+                )
+            if not _sqlite_has_column(conn, "questions", "created_at"):
+                conn.execute(
+                    "ALTER TABLE questions ADD COLUMN created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)"
                 )
             conn.commit()
