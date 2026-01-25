@@ -1,7 +1,15 @@
 import streamlit as st
 
+import pandas as pd
+
 from database.db import init_db, connect
-from database.questions_repo import add_question, delete_all_questions, delete_question, list_questions
+from database.questions_repo import (
+    add_question,
+    delete_all_questions,
+    delete_question,
+    list_questions,
+    update_question,
+)
 
 def check_db_connection() -> tuple[bool, str | None]:
     try:
@@ -76,8 +84,52 @@ table_rows = [
     {"id": qid, "problem": text, "difficulty": diff, "date_added": created_at}
     for qid, text, diff, created_at in rows
 ]
-st.dataframe(
-    table_rows,
-    width="content",
+
+df = pd.DataFrame(table_rows)
+
+if st.session_state.get("_reset_questions_editor"):
+    st.session_state.pop("questions_editor", None)
+    st.session_state["_reset_questions_editor"] = False
+
+st.caption("Edit 'problem' or 'difficulty' in the table, then click Save changes.")
+edited_df = st.data_editor(
+    df,
+    disabled=["id", "date_added"],
     hide_index=True,
+    use_container_width=True,
+    num_rows="fixed",
+    key="questions_editor",
 )
+
+if st.button("Save changes"):
+    state = st.session_state.get("questions_editor", {})
+    edited_rows = state.get("edited_rows", {})
+
+    if not edited_rows:
+        st.info("No changes to save.")
+    else:
+        changed = 0
+        for row_index, patch in edited_rows.items():
+            try:
+                qid = int(df.loc[int(row_index), "id"])
+            except Exception:
+                continue
+
+            new_problem = patch.get("problem") if "problem" in patch else None
+            if isinstance(new_problem, str):
+                new_problem = new_problem.strip()
+
+            new_difficulty = patch.get("difficulty") if "difficulty" in patch else None
+            if isinstance(new_difficulty, str):
+                new_difficulty = new_difficulty.strip().lower()
+
+            ok = update_question(qid, text=new_problem, difficulty=new_difficulty)
+            if ok:
+                changed += 1
+
+        if changed:
+            st.success(f"Saved {changed} change(s).")
+            st.session_state["_reset_questions_editor"] = True
+            st.rerun()
+        else:
+            st.warning("No rows were updated. Check that edited values are valid.")
