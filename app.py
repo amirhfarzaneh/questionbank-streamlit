@@ -87,7 +87,7 @@ if submitted:
         st.error("Please enter a non-empty question.")
 
 st.divider()
-st.subheader("Questions Library")
+st.subheader(f"Questions Library (Total: {len(list_questions())})")
 rows = list_questions()
 table_rows = [
     {
