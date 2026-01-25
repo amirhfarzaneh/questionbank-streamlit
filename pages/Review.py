@@ -1,5 +1,7 @@
 import streamlit as st
 
+import pandas as pd
+
 from database.db import connect, init_db
 from database.questions_repo import get_random_question, list_questions, mark_reviewed
 
@@ -57,9 +59,15 @@ else:
     st.markdown(f"### #{qid} — {diff}")
     st.write(text)
 
+    last_reviewed_pt = pd.to_datetime(last_reviewed, utc=True, errors="coerce")
+    if pd.isna(last_reviewed_pt):
+        last_reviewed_display = "—"
+    else:
+        last_reviewed_display = last_reviewed_pt.tz_convert("America/Los_Angeles").strftime("%Y-%m-%d %H:%M")
+
     meta_cols = st.columns(2)
     meta_cols[0].caption(f"Times reviewed: {times_reviewed or 0}")
-    meta_cols[1].caption(f"Last reviewed: {last_reviewed or '—'}")
+    meta_cols[1].caption(f"Last reviewed (PT): {last_reviewed_display}")
 
     if link:
         st.link_button("Open link", link)

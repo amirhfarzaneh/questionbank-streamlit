@@ -127,6 +127,13 @@ table_rows = [
 
 df = pd.DataFrame(table_rows)
 
+# Display timestamps in Pacific time
+for _col in ["date_added", "last_reviewed"]:
+    if _col in df.columns:
+        ts = pd.to_datetime(df[_col], utc=True, errors="coerce")
+        df[_col] = ts.dt.tz_convert("America/Los_Angeles").dt.strftime("%Y-%m-%d %H:%M")
+        df[_col] = df[_col].where(df[_col].notna(), "—")
+
 if st.session_state.get("_reset_questions_editor"):
     st.session_state.pop("questions_editor", None)
     st.session_state["_reset_questions_editor"] = False
