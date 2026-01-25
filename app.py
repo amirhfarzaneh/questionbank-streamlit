@@ -78,6 +78,6 @@ table_rows = [
 ]
 st.dataframe(
     table_rows,
-    use_container_width=True,
+    width="content",
     hide_index=True,
 )
