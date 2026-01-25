@@ -8,9 +8,16 @@ ALLOWED_DIFFICULTIES = {"easy", "medium", "hard", "unknown"}
 def _is_postgres() -> bool:
     return bool(get_database_url())
 
-def add_question(text: str, difficulty: str = "unknown", *, question_id: int | None = None) -> bool:
+def add_question(
+    text: str,
+    difficulty: str = "unknown",
+    *,
+    question_id: int | None = None,
+    link: str | None = None,
+) -> bool:
     text = (text or "").strip()
     difficulty = (difficulty or "unknown").strip().lower()
+    link = (link or "").strip() or None
     if not text:
         return False
 
@@ -31,18 +38,18 @@ def add_question(text: str, difficulty: str = "unknown", *, question_id: int | N
             with conn.cursor() as cur:
                 if question_id is None:
                     cur.execute(
-                        "INSERT INTO questions(text, difficulty) VALUES (%s, %s)",
-                        (text, difficulty),
+                        "INSERT INTO questions(text, difficulty, link) VALUES (%s, %s, %s)",
+                        (text, difficulty, link),
                     )
                 else:
                     cur.execute(
                         """
-                        INSERT INTO questions(id, text, difficulty)
-                        VALUES (%s, %s, %s)
+                        INSERT INTO questions(id, text, difficulty, link)
+                        VALUES (%s, %s, %s, %s)
                         ON CONFLICT (id)
-                        DO UPDATE SET text = EXCLUDED.text, difficulty = EXCLUDED.difficulty
+                        DO UPDATE SET text = EXCLUDED.text, difficulty = EXCLUDED.difficulty, link = EXCLUDED.link
                         """,
-                        (question_id, text, difficulty),
+                        (question_id, text, difficulty, link),
                     )
                     # Ensure future inserts without explicit id don't collide with manual ids.
                     cur.execute(
@@ -59,19 +66,19 @@ def add_question(text: str, difficulty: str = "unknown", *, question_id: int | N
     with connect() as conn:
         if question_id is None:
             conn.execute(
-                "INSERT INTO questions(text, difficulty) VALUES (?, ?)",
-                (text, difficulty),
+                "INSERT INTO questions(text, difficulty, link) VALUES (?, ?, ?)",
+                (text, difficulty, link),
             )
         else:
             try:
                 conn.execute(
-                    "INSERT INTO questions(id, text, difficulty) VALUES (?, ?, ?)",
-                    (question_id, text, difficulty),
+                    "INSERT INTO questions(id, text, difficulty, link) VALUES (?, ?, ?, ?)",
+                    (question_id, text, difficulty, link),
                 )
             except sqlite3.IntegrityError:
                 conn.execute(
-                    "UPDATE questions SET text = ?, difficulty = ? WHERE id = ?",
-                    (text, difficulty, question_id),
+                    "UPDATE questions SET text = ?, difficulty = ?, link = ? WHERE id = ?",
+                    (text, difficulty, link, question_id),
                 )
         conn.commit()
     return True
@@ -81,14 +88,14 @@ def list_questions(limit: int = 50):
         with connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT id, text, difficulty, created_at FROM questions ORDER BY created_at DESC, id DESC LIMIT %s",
+                    "SELECT id, text, difficulty, created_at, link FROM questions ORDER BY created_at DESC, id DESC LIMIT %s",
                     (limit,),
                 )
                 return cur.fetchall()
 
     with connect() as conn:
         return conn.execute(
-            "SELECT id, text, difficulty, created_at FROM questions ORDER BY created_at DESC, id DESC LIMIT ?",
+            "SELECT id, text, difficulty, created_at, link FROM questions ORDER BY created_at DESC, id DESC LIMIT ?",
             (limit,),
         ).fetchall()
 
@@ -124,7 +131,13 @@ def delete_all_questions() -> None:
         conn.commit()
 
 
-def update_question(question_id: int, *, text: str | None = None, difficulty: str | None = None) -> bool:
+def update_question(
+    question_id: int,
+    *,
+    text: str | None = None,
+    difficulty: str | None = None,
+    link: str | None = None,
+) -> bool:
     if not question_id:
         return False
 
@@ -138,7 +151,10 @@ def update_question(question_id: int, *, text: str | None = None, difficulty: st
         if difficulty not in ALLOWED_DIFFICULTIES:
             difficulty = "unknown"
 
-    if text is None and difficulty is None:
+    if link is not None:
+        link = (link or "").strip() or None
+
+    if text is None and difficulty is None and link is None:
         return False
 
     if _is_postgres():
@@ -150,6 +166,9 @@ def update_question(question_id: int, *, text: str | None = None, difficulty: st
         if difficulty is not None:
             sets.append("difficulty = %s")
             params.append(difficulty)
+        if link is not None:
+            sets.append("link = %s")
+            params.append(link)
         params.append(question_id)
 
         with connect() as conn:
@@ -170,6 +189,9 @@ def update_question(question_id: int, *, text: str | None = None, difficulty: st
     if difficulty is not None:
         sets_sqlite.append("difficulty = ?")
         params_sqlite.append(difficulty)
+    if link is not None:
+        sets_sqlite.append("link = ?")
+        params_sqlite.append(link)
     params_sqlite.append(question_id)
 
     with connect() as conn:

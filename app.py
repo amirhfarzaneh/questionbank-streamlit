@@ -59,6 +59,7 @@ with st.form("add_question_form", clear_on_submit=True):
 if submitted:
     text_to_add = q
     question_id = None
+    link = None
 
     if is_leetcode_problem_url(q):
         try:
@@ -66,6 +67,7 @@ if submitted:
                 meta = _cached_leetcode_metadata(q)
             text_to_add = meta.title
             question_id = meta.problem_id
+            link = q.strip()
 
             if question_id is not None:
                 st.info(f"Detected LeetCode problem #{question_id}: {text_to_add}")
@@ -76,7 +78,7 @@ if submitted:
             with st.expander("Error details"):
                 st.code(str(e))
 
-    if add_question(text_to_add, difficulty=difficulty, question_id=question_id):
+    if add_question(text_to_add, difficulty=difficulty, question_id=question_id, link=link):
         st.success("Added.")
     else:
         st.error("Please enter a non-empty question.")
@@ -111,8 +113,8 @@ with col2:
 st.subheader("Questions Library")
 rows = list_questions()
 table_rows = [
-    {"id": qid, "problem": text, "difficulty": diff, "date_added": created_at}
-    for qid, text, diff, created_at in rows
+    {"id": qid, "problem": text, "difficulty": diff, "date_added": created_at, "link": link}
+    for qid, text, diff, created_at, link in rows
 ]
 
 df = pd.DataFrame(table_rows)
@@ -121,7 +123,7 @@ if st.session_state.get("_reset_questions_editor"):
     st.session_state.pop("questions_editor", None)
     st.session_state["_reset_questions_editor"] = False
 
-st.caption("Edit 'problem' or 'difficulty' in the table, then click Save changes.")
+st.caption("Edit 'problem', 'difficulty', or 'link' in the table, then click Save changes.")
 edited_df = st.data_editor(
     df,
     disabled=["id", "date_added"],
@@ -153,7 +155,13 @@ if st.button("Save changes"):
             if isinstance(new_difficulty, str):
                 new_difficulty = new_difficulty.strip().lower()
 
-            ok = update_question(qid, text=new_problem, difficulty=new_difficulty)
+            new_link = patch.get("link") if "link" in patch else None
+            if isinstance(new_link, float) and pd.isna(new_link):
+                new_link = ""
+            if isinstance(new_link, str):
+                new_link = new_link.strip()
+
+            ok = update_question(qid, text=new_problem, difficulty=new_difficulty, link=new_link)
             if ok:
                 changed += 1
 

@@ -26,6 +26,7 @@ def init_db() -> None:
                         text TEXT NOT NULL,
                         difficulty TEXT NOT NULL DEFAULT 'unknown'
                         ,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                        ,link TEXT
                     )
                     """
                 )
@@ -39,6 +40,12 @@ def init_db() -> None:
                     """
                     ALTER TABLE questions
                     ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    """
+                )
+                cur.execute(
+                    """
+                    ALTER TABLE questions
+                    ADD COLUMN IF NOT EXISTS link TEXT
                     """
                 )
                 cur.execute(
@@ -58,6 +65,7 @@ def init_db() -> None:
                     text TEXT NOT NULL,
                     difficulty TEXT NOT NULL DEFAULT 'unknown'
                     ,created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+                    ,link TEXT
                 )
                 """
             )
@@ -68,5 +76,9 @@ def init_db() -> None:
             if not _sqlite_has_column(conn, "questions", "created_at"):
                 conn.execute(
                     "ALTER TABLE questions ADD COLUMN created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)"
+                )
+            if not _sqlite_has_column(conn, "questions", "link"):
+                conn.execute(
+                    "ALTER TABLE questions ADD COLUMN link TEXT"
                 )
             conn.commit()
