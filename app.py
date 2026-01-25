@@ -11,6 +11,13 @@ from database.questions_repo import (
     update_question,
 )
 
+from integrations.leetcode import fetch_leetcode_problem_metadata, is_leetcode_problem_url
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _cached_leetcode_metadata(url: str):
+    return fetch_leetcode_problem_metadata(url)
+
 def check_db_connection() -> tuple[bool, str | None]:
     try:
         conn = connect()
@@ -36,7 +43,11 @@ init_db()
 st.title("LeetCode Problems")
 
 with st.form("add_question_form", clear_on_submit=True):
-    q = st.text_input("Enter a question", key="question_input")
+    q = st.text_area(
+        "Paste a LeetCode link (or type a problem)",
+        key="question_input",
+        height=80,
+    )
     difficulty = st.selectbox(
         "Difficulty",
         ["unknown", "easy", "medium", "hard"],
@@ -46,7 +57,26 @@ with st.form("add_question_form", clear_on_submit=True):
     submitted = st.form_submit_button("Add")
 
 if submitted:
-    if add_question(q, difficulty=difficulty):
+    text_to_add = q
+    question_id = None
+
+    if is_leetcode_problem_url(q):
+        try:
+            with st.spinner("Fetching problem title from LeetCode..."):
+                meta = _cached_leetcode_metadata(q)
+            text_to_add = meta.title
+            question_id = meta.problem_id
+
+            if question_id is not None:
+                st.info(f"Detected LeetCode problem #{question_id}: {text_to_add}")
+            else:
+                st.info(f"Detected LeetCode title: {text_to_add}")
+        except Exception as e:
+            st.warning("Could not fetch LeetCode title; saving your input as-is.")
+            with st.expander("Error details"):
+                st.code(str(e))
+
+    if add_question(text_to_add, difficulty=difficulty, question_id=question_id):
         st.success("Added.")
     else:
         st.error("Please enter a non-empty question.")
