@@ -27,14 +27,21 @@ init_db()
 
 st.title("LeetCode Problems")
 
-q = st.text_input("Enter a question")
+q = st.text_input("Enter a question", key="question_input")
 
 if st.button("Add"):
     if add_question(q):
         st.success("Added.")
+        st.session_state.question_input = ""
+        st.rerun()
     else:
         st.error("Please enter a non-empty question.")
 
-st.subheader("Recent questions")
-for qid, text in list_questions():
-    st.write(f"{qid}. {text}")
+st.subheader("Questions Library")
+rows = list_questions()
+table_rows = [{"id": qid, "problem": text} for qid, text in rows]
+st.dataframe(
+    table_rows,
+    width="content",
+    hide_index=True,
+)
