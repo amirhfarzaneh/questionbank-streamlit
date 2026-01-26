@@ -83,21 +83,26 @@ def add_question(
         conn.commit()
     return True
 
-def list_questions(limit: int = 50):
+def list_questions(limit: int | None = None):
+    base_sql = (
+        "SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed "
+        "FROM questions "
+        "ORDER BY created_at DESC, id DESC"
+    )
+
     if _is_postgres():
         with connect() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed FROM questions ORDER BY created_at DESC, id DESC LIMIT %s",
-                    (limit,),
-                )
+                if limit is None:
+                    cur.execute(base_sql)
+                else:
+                    cur.execute(f"{base_sql} LIMIT %s", (limit,))
                 return cur.fetchall()
 
     with connect() as conn:
-        return conn.execute(
-            "SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed FROM questions ORDER BY created_at DESC, id DESC LIMIT ?",
-            (limit,),
-        ).fetchall()
+        if limit is None:
+            return conn.execute(base_sql).fetchall()
+        return conn.execute(f"{base_sql} LIMIT ?", (limit,)).fetchall()
 
 
 def get_random_question():
