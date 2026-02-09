@@ -14,10 +14,13 @@ def add_question(
     *,
     question_id: int | None = None,
     link: str | None = None,
+    notes: str | None = None,
 ) -> bool:
     text = (text or "").strip()
     difficulty = (difficulty or "unknown").strip().lower()
     link = (link or "").strip() or None
+    if notes is not None:
+        notes = (notes or "").strip()
     if not text:
         return False
 
@@ -38,18 +41,18 @@ def add_question(
             with conn.cursor() as cur:
                 if question_id is None:
                     cur.execute(
-                        "INSERT INTO questions(text, difficulty, link) VALUES (%s, %s, %s)",
-                        (text, difficulty, link),
+                        "INSERT INTO questions(text, difficulty, link, notes) VALUES (%s, %s, %s, %s)",
+                        (text, difficulty, link, notes),
                     )
                 else:
                     cur.execute(
                         """
-                        INSERT INTO questions(id, text, difficulty, link)
-                        VALUES (%s, %s, %s, %s)
+                        INSERT INTO questions(id, text, difficulty, link, notes)
+                        VALUES (%s, %s, %s, %s, %s)
                         ON CONFLICT (id)
-                        DO UPDATE SET text = EXCLUDED.text, difficulty = EXCLUDED.difficulty, link = EXCLUDED.link
+                        DO UPDATE SET text = EXCLUDED.text, difficulty = EXCLUDED.difficulty, link = EXCLUDED.link, notes = EXCLUDED.notes
                         """,
-                        (question_id, text, difficulty, link),
+                        (question_id, text, difficulty, link, notes),
                     )
                     # Ensure future inserts without explicit id don't collide with manual ids.
                     cur.execute(
@@ -66,26 +69,26 @@ def add_question(
     with connect() as conn:
         if question_id is None:
             conn.execute(
-                "INSERT INTO questions(text, difficulty, link) VALUES (?, ?, ?)",
-                (text, difficulty, link),
+                "INSERT INTO questions(text, difficulty, link, notes) VALUES (?, ?, ?, ?)",
+                (text, difficulty, link, notes),
             )
         else:
             try:
                 conn.execute(
-                    "INSERT INTO questions(id, text, difficulty, link) VALUES (?, ?, ?, ?)",
-                    (question_id, text, difficulty, link),
+                    "INSERT INTO questions(id, text, difficulty, link, notes) VALUES (?, ?, ?, ?, ?)",
+                    (question_id, text, difficulty, link, notes),
                 )
             except sqlite3.IntegrityError:
                 conn.execute(
-                    "UPDATE questions SET text = ?, difficulty = ?, link = ? WHERE id = ?",
-                    (text, difficulty, link, question_id),
+                    "UPDATE questions SET text = ?, difficulty = ?, link = ?, notes = ? WHERE id = ?",
+                    (text, difficulty, link, notes, question_id),
                 )
         conn.commit()
     return True
 
 def list_questions(limit: int | None = None):
     base_sql = (
-        "SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed "
+        "SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed, notes "
         "FROM questions "
         "ORDER BY created_at DESC, id DESC"
     )
@@ -112,7 +115,7 @@ def get_random_question():
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed
+                    SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed, notes
                     FROM questions
                     ORDER BY RANDOM()
                     LIMIT 1
@@ -123,7 +126,7 @@ def get_random_question():
     with connect() as conn:
         return conn.execute(
             """
-            SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed
+            SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed, notes
             FROM questions
             ORDER BY RANDOM()
             LIMIT 1
@@ -140,7 +143,7 @@ def get_question_by_id(question_id: int):
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed
+                    SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed, notes
                     FROM questions
                     WHERE id = %s
                     """,
@@ -151,7 +154,7 @@ def get_question_by_id(question_id: int):
     with connect() as conn:
         return conn.execute(
             """
-            SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed
+            SELECT id, text, difficulty, created_at, link, last_reviewed, times_reviewed, notes
             FROM questions
             WHERE id = ?
             """,
@@ -196,6 +199,7 @@ def update_question(
     text: str | None = None,
     difficulty: str | None = None,
     link: str | None = None,
+    notes: str | None = None,
     last_reviewed: object | None = None,
     times_reviewed: object | None = None,
 ) -> bool:
@@ -215,6 +219,9 @@ def update_question(
     if link is not None:
         link = (link or "").strip() or None
 
+    if notes is not None:
+        notes = (notes or "").strip()
+
     if times_reviewed is not None:
         try:
             times_reviewed = int(times_reviewed)
@@ -228,7 +235,14 @@ def update_question(
         if isinstance(last_reviewed, str):
             last_reviewed = last_reviewed.strip() or None
 
-    if text is None and difficulty is None and link is None and last_reviewed is None and times_reviewed is None:
+    if (
+        text is None
+        and difficulty is None
+        and link is None
+        and notes is None
+        and last_reviewed is None
+        and times_reviewed is None
+    ):
         return False
 
     if _is_postgres():
@@ -243,6 +257,9 @@ def update_question(
         if link is not None:
             sets.append("link = %s")
             params.append(link)
+        if notes is not None:
+            sets.append("notes = %s")
+            params.append(notes)
         if last_reviewed is not None:
             sets.append("last_reviewed = %s")
             params.append(last_reviewed)
@@ -272,6 +289,9 @@ def update_question(
     if link is not None:
         sets_sqlite.append("link = ?")
         params_sqlite.append(link)
+    if notes is not None:
+        sets_sqlite.append("notes = ?")
+        params_sqlite.append(notes)
     if last_reviewed is not None:
         sets_sqlite.append("last_reviewed = ?")
         params_sqlite.append(last_reviewed)

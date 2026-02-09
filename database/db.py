@@ -29,6 +29,7 @@ def init_db() -> None:
                         ,last_reviewed TIMESTAMPTZ
                         ,times_reviewed INTEGER NOT NULL DEFAULT 0
                         ,link TEXT
+                        ,notes TEXT
                     )
                     """
                 )
@@ -64,6 +65,12 @@ def init_db() -> None:
                 )
                 cur.execute(
                     """
+                    ALTER TABLE questions
+                    ADD COLUMN IF NOT EXISTS notes TEXT
+                    """
+                )
+                cur.execute(
+                    """
                     UPDATE questions
                     SET difficulty = 'unknown'
                     WHERE difficulty IS NULL
@@ -89,6 +96,7 @@ def init_db() -> None:
                     ,last_reviewed TEXT
                     ,times_reviewed INTEGER NOT NULL DEFAULT 0
                     ,link TEXT
+                    ,notes TEXT
                 )
                 """
             )
@@ -111,6 +119,10 @@ def init_db() -> None:
             if not _sqlite_has_column(conn, "questions", "times_reviewed"):
                 conn.execute(
                     "ALTER TABLE questions ADD COLUMN times_reviewed INTEGER NOT NULL DEFAULT 0"
+                )
+            if not _sqlite_has_column(conn, "questions", "notes"):
+                conn.execute(
+                    "ALTER TABLE questions ADD COLUMN notes TEXT"
                 )
             conn.execute(
                 "UPDATE questions SET times_reviewed = 0 WHERE times_reviewed IS NULL"

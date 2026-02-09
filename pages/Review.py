@@ -69,7 +69,7 @@ def _pick_most_due(rows):
 
     scored = []
     for r in rows:
-        # r: (id, text, difficulty, created_at, link, last_reviewed, times_reviewed)
+        # r: (id, text, difficulty, created_at, link, last_reviewed, times_reviewed, notes)
         score = _due_score(r[5], r[6])
         scored.append((score, r))
 
@@ -142,7 +142,7 @@ if row is None:
 if row is None:
     st.info("No questions yet. Add one on the Home page.")
 else:
-    qid, text, diff, created_at, link, last_reviewed, times_reviewed = row
+    qid, text, diff, created_at, link, last_reviewed, times_reviewed, notes = row
 
     score = _due_score(last_reviewed, times_reviewed)
 
@@ -162,6 +162,9 @@ else:
 
     if link:
         st.link_button("Open link", link)
+
+    if notes:
+        st.caption(f"Notes: {notes}")
 
     if st.button("Reviewed", type="primary"):
         if mark_reviewed(int(qid)):

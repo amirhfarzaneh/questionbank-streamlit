@@ -98,8 +98,9 @@ table_rows = [
         "link": link,
         "last_reviewed": last_reviewed,
         "times_reviewed": times_reviewed,
+        "notes": notes or "",
     }
-    for qid, text, diff, created_at, link, last_reviewed, times_reviewed in rows
+    for qid, text, diff, created_at, link, last_reviewed, times_reviewed, notes in rows
 ]
 
 df = pd.DataFrame(table_rows)
@@ -163,11 +164,18 @@ if st.button("Save changes"):
             if isinstance(new_times_reviewed, float) and pd.isna(new_times_reviewed):
                 new_times_reviewed = None
 
+            new_notes = patch.get("notes") if "notes" in patch else None
+            if isinstance(new_notes, float) and pd.isna(new_notes):
+                new_notes = ""
+            if isinstance(new_notes, str):
+                new_notes = new_notes.strip()
+
             ok = update_question(
                 qid,
                 text=new_problem,
                 difficulty=new_difficulty,
                 link=new_link,
+                notes=new_notes,
                 last_reviewed=new_last_reviewed,
                 times_reviewed=new_times_reviewed,
             )
