@@ -40,6 +40,12 @@ init_db()
 if "review_candidate_id" not in st.session_state:
     st.session_state["review_candidate_id"] = None
 
+if "review_show_notes" not in st.session_state:
+    st.session_state["review_show_notes"] = False
+
+if "review_show_notes_qid" not in st.session_state:
+    st.session_state["review_show_notes_qid"] = None
+
 
 def _due_score(last_reviewed_value, times_reviewed_value) -> float:
     """Higher means more due."""
@@ -144,6 +150,11 @@ if row is None:
 else:
     qid, text, diff, created_at, link, last_reviewed, times_reviewed, notes = row
 
+    # Hide notes when switching to a new question, until user explicitly reveals them.
+    if st.session_state.get("review_show_notes_qid") != int(qid):
+        st.session_state["review_show_notes_qid"] = int(qid)
+        st.session_state["review_show_notes"] = False
+
     score = _due_score(last_reviewed, times_reviewed)
 
     st.markdown(f"### #{qid} — {text}")
@@ -163,8 +174,19 @@ else:
     if link:
         st.link_button("Open link", link)
 
-    if notes:
-        st.caption(f"Notes: {notes}")
+    notes_col_a, _notes_col_b = st.columns([1, 3])
+    with notes_col_a:
+        if st.button("Show/Hide notes", key=f"review_toggle_notes_{qid}"):
+            st.session_state["review_show_notes"] = not st.session_state.get("review_show_notes")
+
+    if st.session_state.get("review_show_notes"):
+        st.text_area(
+            "Notes",
+            value=(notes or ""),
+            height=140,
+            disabled=True,
+            key=f"review_notes_text_{qid}",
+        )
 
     if st.button("Reviewed", type="primary"):
         if mark_reviewed(int(qid)):
