@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import pandas as pd
 
 from database.db import connect, init_db
-from database.questions_repo import get_question_by_id, get_random_question, list_questions, mark_reviewed
+from database.questions_repo import get_question_by_id, get_random_question, list_questions, mark_reviewed, update_question
 
 
 def check_db_connection() -> tuple[bool, str | None]:
@@ -180,13 +180,19 @@ else:
             st.session_state["review_show_notes"] = not st.session_state.get("review_show_notes")
 
     if st.session_state.get("review_show_notes"):
-        st.text_area(
+        edited_notes = st.text_area(
             "Notes",
             value=(notes or ""),
-            height=140,
-            disabled=True,
+            height=160,
+            disabled=False,
             key=f"review_notes_text_{qid}",
         )
+
+        if st.button("Save notes", type="primary", key=f"review_save_notes_{qid}"):
+            if update_question(int(qid), notes=edited_notes):
+                st.success("Notes saved.")
+            else:
+                st.error("Could not save notes.")
 
     if st.button("Reviewed", type="primary"):
         if mark_reviewed(int(qid)):
