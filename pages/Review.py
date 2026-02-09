@@ -188,7 +188,7 @@ else:
             key=f"review_notes_text_{qid}",
         )
 
-        if st.button("Save notes", type="primary", key=f"review_save_notes_{qid}"):
+        if st.button("Save notes", key=f"review_save_notes_{qid}"):
             if update_question(int(qid), notes=edited_notes):
                 st.success("Notes saved.")
             else:
